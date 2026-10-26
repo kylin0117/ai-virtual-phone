@@ -5,7 +5,11 @@ import { useEffect } from "react";
 import { shouldRequestPwaFullscreen } from "@/lib/pwa-display-mode";
 
 /**
- * 安卓全屏兜底：已关闭点击屏幕自动全屏，防止安卓 Chrome 反复弹出全屏安全提示框。
+ * 安卓全屏兜底：点击屏幕进入全屏模式（iOS 不支持此 API，会自动忽略）。
+ *
+ * world-builder（筑境）通过 window.open 开在独立窗口，不在 main-app 的 React 树内，
+ * 因此拿不到 main-app 里那段「点击进全屏」的监听，会一直露出浏览器地址栏。
+ * 这个组件把同一套逻辑复刻到 world-builder 窗口，挂上即可。
  */
 export function AndroidFullscreen() {
   useEffect(() => {
@@ -16,10 +20,11 @@ export function AndroidFullscreen() {
 
     function tryFullscreen() {
       if (!shouldRequestPwaFullscreen()) return;
-      // 下面这行自动全屏已被禁用，不再触发烦人的弹窗
-      return;
+      const doc = document.documentElement;
+      if (document.fullscreenElement) return;
+      doc.requestFullscreen?.().catch(() => { });
     }
-    
+    // 每次点击都尝试进入全屏（退出后可重新进入）
     document.addEventListener("click", tryFullscreen);
     return () => {
       document.removeEventListener("click", tryFullscreen);
